@@ -1,8 +1,6 @@
 import bcrypt from 'bcrypt';
-import postgres from 'postgres';
 import { invoices, customers, revenue, users } from '../lib/placeholder-data';
-
-const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
+import { getSql } from '../lib/db';
 
 async function seedUsers(sql: any) {
   await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
@@ -42,11 +40,23 @@ async function seedInvoices(sql: any) {
     );
   `;
 
+  // Remove previously seeded duplicates before inserting the fixed seed set.
+  await Promise.all(
+    invoices.map((invoice) => sql`
+      DELETE FROM invoices
+      WHERE
+        customer_id = ${invoice.customer_id} AND
+        amount = ${invoice.amount} AND
+        status = ${invoice.status} AND
+        date = ${invoice.date};
+    `),
+  );
+
   const insertedInvoices = await Promise.all(
     invoices.map(
       (invoice) => sql`
-        INSERT INTO invoices (customer_id, amount, status, date)
-        VALUES (${invoice.customer_id}, ${invoice.amount}, ${invoice.status}, ${invoice.date})
+        INSERT INTO invoices (id, customer_id, amount, status, date)
+        VALUES (${invoice.id}, ${invoice.customer_id}, ${invoice.amount}, ${invoice.status}, ${invoice.date})
         ON CONFLICT (id) DO NOTHING;
       `,
     ),
@@ -103,6 +113,7 @@ async function seedRevenue(sql: any) {
 
 export async function GET() {
   try {
+    const sql = getSql();
     const result = await sql.begin((sql) => [
       seedUsers(sql),
       seedCustomers(sql),
