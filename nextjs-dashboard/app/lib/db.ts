@@ -2,6 +2,10 @@ import postgres from 'postgres';
 
 let sqlClient: ReturnType<typeof postgres> | undefined;
 
+export function hasPostgresUrl() {
+  return Boolean(process.env.POSTGRES_URL);
+}
+
 export function getSql() {
   const connectionString = process.env.POSTGRES_URL;
 

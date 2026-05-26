@@ -6,10 +6,24 @@ import {
   LatestInvoiceRaw,
   Revenue,
 } from './definitions';
-import { getSql } from './db';
+import { getSql, hasPostgresUrl } from './db';
+import {
+  fetchLocalCardData,
+  fetchLocalCustomers,
+  fetchLocalFilteredCustomers,
+  fetchLocalFilteredInvoices,
+  fetchLocalInvoiceById,
+  fetchLocalInvoicesPages,
+  fetchLocalLatestInvoices,
+  fetchLocalRevenue,
+} from './local-data';
 import { formatCurrency } from './utils';
 
 export async function fetchRevenue() {
+  if (!hasPostgresUrl()) {
+    return fetchLocalRevenue();
+  }
+
   try {
     const sql = getSql();
     // Artificially delay a response for demo purposes.
@@ -30,6 +44,10 @@ export async function fetchRevenue() {
 }
 
 export async function fetchLatestInvoices() {
+  if (!hasPostgresUrl()) {
+    return fetchLocalLatestInvoices();
+  }
+
   try {
     const sql = getSql();
     const data = await sql<LatestInvoiceRaw[]>`
@@ -51,6 +69,10 @@ export async function fetchLatestInvoices() {
 }
 
 export async function fetchCardData() {
+  if (!hasPostgresUrl()) {
+    return fetchLocalCardData();
+  }
+
   try {
     const sql = getSql();
     // You can probably combine these into a single SQL query
@@ -91,6 +113,10 @@ export async function fetchFilteredInvoices(
   query: string,
   currentPage: number,
 ) {
+  if (!hasPostgresUrl()) {
+    return fetchLocalFilteredInvoices(query, currentPage);
+  }
+
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   try {
@@ -124,6 +150,10 @@ export async function fetchFilteredInvoices(
 }
 
 export async function fetchInvoicesPages(query: string) {
+  if (!hasPostgresUrl()) {
+    return fetchLocalInvoicesPages(query);
+  }
+
   try {
     const sql = getSql();
     const data = await sql`SELECT COUNT(*)
@@ -146,6 +176,10 @@ export async function fetchInvoicesPages(query: string) {
 }
 
 export async function fetchInvoiceById(id: string) {
+  if (!hasPostgresUrl()) {
+    return fetchLocalInvoiceById(id);
+  }
+
   try {
     const sql = getSql();
     const data = await sql<InvoiceForm[]>`
@@ -172,6 +206,10 @@ export async function fetchInvoiceById(id: string) {
 }
 
 export async function fetchCustomers() {
+  if (!hasPostgresUrl()) {
+    return fetchLocalCustomers();
+  }
+
   try {
     const sql = getSql();
     const customers = await sql<CustomerField[]>`
@@ -190,6 +228,10 @@ export async function fetchCustomers() {
 }
 
 export async function fetchFilteredCustomers(query: string) {
+  if (!hasPostgresUrl()) {
+    return fetchLocalFilteredCustomers(query);
+  }
+
   try {
     const sql = getSql();
     const data = await sql<CustomersTableType[]>`
