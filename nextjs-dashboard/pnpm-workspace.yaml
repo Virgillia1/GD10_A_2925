@@ -1,0 +1,6 @@
+allowBuilds:
+  bcrypt: true
+  sharp: true
+onlyBuiltDependencies:
+  - bcrypt
+  - sharp

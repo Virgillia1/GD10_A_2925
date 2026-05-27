@@ -1,0 +1,18 @@
+▲ Next.js 16.2.3 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.34:3000
+- Environments: .env.local
+✓ Ready in 396ms
+Creating turbopack project { dir: 'E:\\SIWEB\\GD11_A_2925\\nextjs-dashboard', testMode: true }
+
+○ Compiling / ...
+ GET / 200 in 4.1s (next.js: 3.6s, proxy.ts: 181ms, application-code: 350ms)
+ GET /login 200 in 4.2s (next.js: 3.9s, proxy.ts: 178ms, application-code: 78ms)
+ GET / 200 in 55ms (next.js: 4ms, proxy.ts: 7ms, application-code: 44ms)
+ GET /login?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fdashboard 200 in 46ms (next.js: 4ms, proxy.ts: 4ms, application-code: 38ms)
+ GET /dashboard 200 in 497ms (next.js: 397ms, proxy.ts: 11ms, application-code: 89ms)
+ POST /login?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fdashboard 303 in 630ms (next.js: 3ms, proxy.ts: 5ms, application-code: 622ms)
+  └─ ƒ authenticate(undefined, {}) in 19ms app/lib/actions.ts
+ GET /dashboard/customers 200 in 477ms (next.js: 430ms, proxy.ts: 6ms, application-code: 41ms)
+[?25h
+[ELIFECYCLE] Command failed with exit code 4294967295.
