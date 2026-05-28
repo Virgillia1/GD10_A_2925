@@ -11,6 +11,8 @@ import {
   revenue,
 } from './placeholder-data';
 import { formatCurrency } from './utils';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import path from 'path';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -26,6 +28,39 @@ let invoices: LocalInvoice[] = seedInvoices.map((invoice) => ({
   ...invoice,
   status: invoice.status as 'pending' | 'paid',
 }));
+
+const localDataDir = process.env.VERCEL
+  ? path.join('/tmp', 'nextjs-dashboard-local-data')
+  : path.join(process.cwd(), '.local-data');
+const invoicesFile = path.join(localDataDir, 'invoices.json');
+
+function readInvoices() {
+  if (!existsSync(invoicesFile)) {
+    return invoices;
+  }
+
+  try {
+    const data = JSON.parse(readFileSync(invoicesFile, 'utf8'));
+    if (Array.isArray(data)) {
+      invoices = data;
+    }
+  } catch (error) {
+    console.error('Failed to read local invoices:', error);
+  }
+
+  return invoices;
+}
+
+function writeInvoices(nextInvoices: LocalInvoice[]) {
+  invoices = nextInvoices;
+
+  try {
+    mkdirSync(localDataDir, { recursive: true });
+    writeFileSync(invoicesFile, JSON.stringify(invoices, null, 2));
+  } catch (error) {
+    console.error('Failed to write local invoices:', error);
+  }
+}
 
 function invoiceWithCustomer(invoice: LocalInvoice): InvoicesTable {
   const customer = seedCustomers.find(
@@ -61,7 +96,7 @@ export function fetchLocalRevenue() {
 }
 
 export function fetchLocalLatestInvoices() {
-  return invoices
+  return readInvoices()
     .map(invoiceWithCustomer)
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 5)
@@ -79,16 +114,17 @@ export function fetchLocalLatestInvoices() {
 }
 
 export function fetchLocalCardData() {
-  const totalPaid = invoices
+  const currentInvoices = readInvoices();
+  const totalPaid = currentInvoices
     .filter((invoice) => invoice.status === 'paid')
     .reduce((sum, invoice) => sum + invoice.amount, 0);
-  const totalPending = invoices
+  const totalPending = currentInvoices
     .filter((invoice) => invoice.status === 'pending')
     .reduce((sum, invoice) => sum + invoice.amount, 0);
 
   return {
     numberOfCustomers: seedCustomers.length,
-    numberOfInvoices: invoices.length,
+    numberOfInvoices: currentInvoices.length,
     totalPaidInvoices: formatCurrency(totalPaid),
     totalPendingInvoices: formatCurrency(totalPending),
   };
@@ -100,7 +136,7 @@ export function fetchLocalFilteredInvoices(
 ) {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
-  return invoices
+  return readInvoices()
     .map(invoiceWithCustomer)
     .filter((invoice) => matchesQuery(invoice, query))
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -108,7 +144,7 @@ export function fetchLocalFilteredInvoices(
 }
 
 export function fetchLocalInvoicesPages(query: string) {
-  const totalInvoices = invoices
+  const totalInvoices = readInvoices()
     .map(invoiceWithCustomer)
     .filter((invoice) => matchesQuery(invoice, query)).length;
 
@@ -116,7 +152,7 @@ export function fetchLocalInvoicesPages(query: string) {
 }
 
 export function fetchLocalInvoiceById(id: string): InvoiceForm | undefined {
-  const invoice = invoices.find((invoice) => invoice.id === id);
+  const invoice = readInvoices().find((invoice) => invoice.id === id);
 
   if (!invoice) {
     return undefined;
@@ -150,7 +186,7 @@ export function fetchLocalFilteredCustomers(query: string) {
     )
     .sort((a, b) => a.name.localeCompare(b.name))
     .map<CustomersTableType>((customer) => {
-      const customerInvoices = invoices.filter(
+      const customerInvoices = readInvoices().filter(
         (invoice) => invoice.customer_id === customer.id,
       );
       const totalPending = customerInvoices
@@ -186,13 +222,16 @@ export function createLocalInvoice({
   amount: number;
   status: 'pending' | 'paid';
 }) {
-  invoices.unshift({
-    id: crypto.randomUUID(),
-    customer_id: customerId,
-    amount,
-    status,
-    date: new Date().toISOString().split('T')[0],
-  });
+  writeInvoices([
+    {
+      id: crypto.randomUUID(),
+      customer_id: customerId,
+      amount,
+      status,
+      date: new Date().toISOString().split('T')[0],
+    },
+    ...readInvoices(),
+  ]);
 }
 
 export function updateLocalInvoice({
@@ -206,18 +245,20 @@ export function updateLocalInvoice({
   amount: number;
   status: 'pending' | 'paid';
 }) {
-  invoices = invoices.map((invoice) =>
-    invoice.id === id
-      ? {
-          ...invoice,
-          customer_id: customerId,
-          amount,
-          status,
-        }
-      : invoice,
+  writeInvoices(
+    readInvoices().map((invoice) =>
+      invoice.id === id
+        ? {
+            ...invoice,
+            customer_id: customerId,
+            amount,
+            status,
+          }
+        : invoice,
+    ),
   );
 }
 
 export function deleteLocalInvoice(id: string) {
-  invoices = invoices.filter((invoice) => invoice.id !== id);
+  writeInvoices(readInvoices().filter((invoice) => invoice.id !== id));
 }
