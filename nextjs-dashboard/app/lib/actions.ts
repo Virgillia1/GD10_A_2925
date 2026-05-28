@@ -30,6 +30,11 @@ const FormSchema = z.object({
 const CreateInvoice = FormSchema.omit({ id: true, date: true });
 const UpdateInvoice = FormSchema.omit({ id: true, date: true });
 
+function revalidateInvoicePages() {
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/invoices');
+}
+
 export async function createInvoice(
   prevState: State,
   formData: FormData,
@@ -53,7 +58,7 @@ export async function createInvoice(
 
   if (!hasPostgresUrl()) {
     createLocalInvoice({ customerId, amount: amountInCents, status });
-    revalidatePath('/dashboard/invoices');
+    revalidateInvoicePages();
     redirect('/dashboard/invoices');
   }
 
@@ -64,12 +69,13 @@ export async function createInvoice(
       VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
     `;
   } catch (error) {
+    console.error(error);
     return {
       message: 'Database Error: Failed to Create Invoice.',
     };
   }
 
-  revalidatePath('/dashboard/invoices');
+  revalidateInvoicePages();
   redirect('/dashboard/invoices');
 }
 
@@ -96,7 +102,7 @@ export async function updateInvoice(
 
   if (!hasPostgresUrl()) {
     updateLocalInvoice({ id, customerId, amount: amountInCents, status });
-    revalidatePath('/dashboard/invoices');
+    revalidateInvoicePages();
     redirect('/dashboard/invoices');
   }
 
@@ -108,12 +114,13 @@ export async function updateInvoice(
       WHERE id = ${id}
     `;
   } catch (error) {
+    console.error(error);
     return {
       message: 'Database Error: Failed to Update Invoice.',
     };
   }
 
-  revalidatePath('/dashboard/invoices');
+  revalidateInvoicePages();
   redirect('/dashboard/invoices');
 }
 
@@ -121,14 +128,15 @@ export async function deleteInvoice(id: string) {
   try {
     if (!hasPostgresUrl()) {
       deleteLocalInvoice(id);
-      revalidatePath('/dashboard/invoices');
+      revalidateInvoicePages();
       return;
     }
 
     const sql = getSql();
     await sql`DELETE FROM invoices WHERE id = ${id}`;
-    revalidatePath('/dashboard/invoices');
+    revalidateInvoicePages();
   } catch (error) {
+    console.error(error);
     throw new Error('Database Error: Failed to Delete Invoice.');
   }
 }
